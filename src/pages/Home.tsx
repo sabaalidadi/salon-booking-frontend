@@ -1,19 +1,21 @@
 import { Link } from 'react-router-dom';
-import { servicesApi, specialistsApi } from '../api/endpoints';
+import { categoriesApi, servicesApi, specialistsApi } from '../api/endpoints';
 import { useAuth } from '../auth/AuthContext';
-import { AsyncView, Empty } from '../components/ui';
+import { AsyncView, Empty, PersonAvatar } from '../components/ui';
 import { formatDuration, formatPrice, toFaDigits } from '../lib/format';
 import { useAsync } from '../lib/useAsync';
 
 export function Home() {
   const { user } = useAuth();
+  const categories = useAsync(() => categoriesApi.list());
   const services = useAsync(() => servicesApi.list());
   const specialists = useAsync(() => specialistsApi.list());
 
   return (
     <>
       <section className="hero">
-        <h1>زیبایی‌ات را به ما بسپار</h1>
+        <span className="eyebrow">پلتفرم هوشمند رزرو زیبایی</span>
+        <h1>رزرو آنلاین سالن زیبایی</h1>
         <p>
           خدمات آرایشی و زیبایی را ببین، متخصص دلخواهت را انتخاب کن و در چند ثانیه
           نوبتت را رزرو کن.
@@ -28,10 +30,45 @@ export function Home() {
             </Link>
           )}
         </div>
+        <div className="hero-chips">
+          {(categories.data ?? []).map((c) => (
+            <Link key={c.id} to={`/book?category=${c.id}`}>
+              {c.icon} {c.label}
+            </Link>
+          ))}
+        </div>
       </section>
 
       <section className="section">
-        <div className="spread" style={{ marginBottom: 16 }}>
+        <div className="section-head">
+          <h2>دسته‌بندی خدمات</h2>
+        </div>
+        <div className="cat-grid">
+          {(categories.data ?? []).map((c) => (
+            <Link key={c.id} to={`/book?category=${c.id}`} className="cat">
+              <span className="cat-icon">{c.icon}</span>
+              {c.label}
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <section className="section">
+        <div className="section-head">
+          <h2>رزرو در ۳ مرحله</h2>
+        </div>
+        <div className="how-grid">
+          {STEPS.map((s, i) => (
+            <div key={s} className="card how-step">
+              <div className="how-num">{toFaDigits(i + 1)}</div>
+              <h3>{s}</h3>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="section">
+        <div className="section-head">
           <h2>خدمات سالن</h2>
         </div>
         <AsyncView loading={services.loading} error={services.error} onRetry={services.reload}>
@@ -69,9 +106,11 @@ export function Home() {
               {specialists.data.map((sp) => (
                 <article key={sp.id} className="card service-card">
                   <div className="row">
-                    <span className="avatar">{sp.specialist.fullName.charAt(0)}</span>
+                    <PersonAvatar name={sp.specialist.fullName} url={sp.avatarUrl} size={48} />
                     <div>
-                      <h3>{sp.specialist.fullName}</h3>
+                      <h3>
+                        <Link to={`/specialists/${sp.id}`}>{sp.specialist.fullName}</Link>
+                      </h3>
                       <span className="muted small">
                         {toFaDigits(sp.yearsExperience)} سال سابقه
                       </span>
@@ -100,6 +139,23 @@ export function Home() {
           )}
         </AsyncView>
       </section>
+
+      <section className="section trust-grid">
+        {TRUST.map((t) => (
+          <div key={t.label} className="card trust">
+            <span className="trust-icon">{t.icon}</span>
+            <strong>{t.label}</strong>
+          </div>
+        ))}
+      </section>
     </>
   );
 }
+
+const STEPS = ['انتخاب خدمت و متخصص', 'انتخاب روز و ساعت', 'ثبت و تأیید نوبت'];
+
+const TRUST = [
+  { icon: '🔒', label: 'پرداخت امن' },
+  { icon: '🎧', label: 'پشتیبانی ۲۴ ساعته' },
+  { icon: '✅', label: 'رزرو تضمینی' },
+];

@@ -156,3 +156,39 @@ export function AsyncView({
     );
   return <>{children}</>;
 }
+
+export function Stars({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange?: (n: number) => void;
+}) {
+  return (
+    <span className="stars" dir="ltr" aria-label={`امتیاز ${value} از ۵`}>
+      {[1, 2, 3, 4, 5].map((n) => {
+        const cls = `star${n <= Math.round(value) ? ' on' : ''}`;
+        return onChange ? (
+          <button key={n} type="button" className={cls} onClick={() => onChange(n)} aria-label={`${n} ستاره`}>
+            ★
+          </button>
+        ) : (
+          <span key={n} className={cls}>
+            ★
+          </span>
+        );
+      })}
+    </span>
+  );
+}
+
+export function PersonAvatar({ name, url, size = 34 }: { name: string; url?: string | null; size?: number }) {
+  const style = { width: size, height: size, fontSize: size * 0.4 };
+  return url ? (
+    <img className="avatar avatar-img" style={style} src={url} alt={name} />
+  ) : (
+    <span className="avatar" style={style}>
+      {name.trim().charAt(0)}
+    </span>
+  );
+}

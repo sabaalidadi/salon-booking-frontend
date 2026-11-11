@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { appointmentsApi } from '../api/endpoints';
-import { Alert, AsyncView, Empty, PageHeader, StatusBadge } from '../components/ui';
+import type { CustomerAppointment } from '../api/types';
+import { Alert, AsyncView, Button, Empty, PageHeader, StatusBadge } from '../components/ui';
+import { CancelDialog, RescheduleDialog, ReviewDialog } from './AppointmentDialogs';
 import { formatDate, formatPrice, formatShortDate, formatTime } from '../lib/format';
 import { useAsync } from '../lib/useAsync';
 
@@ -12,6 +14,16 @@ export function MyAppointments() {
   const justBooked = (location.state as { booked?: boolean } | null)?.booked;
   const { data, loading, error, reload } = useAsync(() => appointmentsApi.mine());
   const [filter, setFilter] = useState<Filter>('upcoming');
+  const [dialog, setDialog] = useState<
+    { kind: 'cancel' | 'reschedule' | 'review'; appt: CustomerAppointment } | null
+  >(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const done = (text: string) => () => {
+    setDialog(null);
+    setNotice(text);
+    void reload();
+  };
 
   const now = Date.now();
   const list = (data ?? [])
@@ -42,6 +54,8 @@ export function MyAppointments() {
           نوبت شما ثبت شد و پس از تأیید متخصص قطعی می‌شود.
         </Alert>
       )}
+
+      {notice && <Alert kind="success">{notice}</Alert>}
 
       <div className="tabs">
         <button
@@ -79,6 +93,25 @@ export function MyAppointments() {
                 </div>
                 <div className="appt-actions">
                   <StatusBadge status={a.status} />
+                  {(a.status === 'PENDING' || a.status === 'CONFIRMED') &&
+                    new Date(a.startTime).getTime() > now && (
+                      <>
+                        <Button small variant="secondary" onClick={() => setDialog({ kind: 'reschedule', appt: a })}>
+                          تغییر زمان
+                        </Button>
+                        <Button small variant="danger" onClick={() => setDialog({ kind: 'cancel', appt: a })}>
+                          لغو
+                        </Button>
+                      </>
+                    )}
+                  {a.status === 'COMPLETED' && (
+                    <Button small variant="secondary" onClick={() => setDialog({ kind: 'review', appt: a })}>
+                      ثبت نظر
+                    </Button>
+                  )}
+                  <Link to={`/specialists/${a.specialistId}`} className="btn btn-ghost btn-sm">
+                    متخصص
+                  </Link>
                 </div>
               </article>
             ))}
@@ -89,6 +122,20 @@ export function MyAppointments() {
           </Empty>
         )}
       </AsyncView>
+
+      {dialog && (
+        <>
+          {dialog.kind === 'cancel' && (
+            <CancelDialog appt={dialog.appt} onClose={() => setDialog(null)} onDone={done('نوبت لغو شد.')} />
+          )}
+          {dialog.kind === 'reschedule' && (
+            <RescheduleDialog appt={dialog.appt} onClose={() => setDialog(null)} onDone={done('زمان نوبت تغییر کرد.')} />
+          )}
+          {dialog.kind === 'review' && (
+            <ReviewDialog appt={dialog.appt} onClose={() => setDialog(null)} onDone={done('نظر شما ثبت شد.')} />
+          )}
+        </>
+      )}
     </>
   );
 }

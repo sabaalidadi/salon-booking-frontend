@@ -52,6 +52,7 @@ export function Book() {
   const [params, setParams] = useSearchParams();
 
   const serviceId = params.get('service');
+  const categoryId = params.get('category');
   const specialistId = params.get('specialist');
 
   const services = useAsync(() => servicesApi.list());
@@ -80,11 +81,11 @@ export function Book() {
 
   // If a specialist was picked first, narrow services to theirs.
   const serviceOptions = useMemo(() => {
-    const all = services.data ?? [];
+    const all = (services.data ?? []).filter((s) => !categoryId || s.categoryId === categoryId);
     if (!specialist) return all;
     const ids = new Set(specialist.services.map((s) => s.id));
     return all.filter((s) => ids.has(s.id));
-  }, [services.data, specialist]);
+  }, [services.data, specialist, categoryId]);
 
   const days = useMemo(() => {
     const today = startOfDay(new Date());

@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { specialistsApi } from '../../api/endpoints';
-import { Alert, AsyncView, Button, Field, Input, PageHeader, Textarea } from '../../components/ui';
+import { Alert, AsyncView, Button, Field, Input, PageHeader, PersonAvatar, Textarea } from '../../components/ui';
 import { errorText } from '../../lib/useAsync';
 import { useMyProfile } from './useMyProfile';
 
@@ -92,6 +92,54 @@ export function SpecialistProfilePage() {
             </div>
           </form>
         </div>
+
+        {profile && (
+          <div className="card" style={{ maxWidth: 640 }}>
+            <h2>عکس پروفایل</h2>
+            <div className="row">
+              <PersonAvatar name={profile.specialist.fullName} url={profile.avatarUrl} size={72} />
+              <input
+                type="file"
+                accept="image/*"
+                disabled={busy}
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = '';
+                  if (!file) return;
+                  setBusy(true);
+                  setMessage(null);
+                  try {
+                    setProfile(await specialistsApi.uploadAvatar(file));
+                    setMessage({ kind: 'success', text: 'عکس پروفایل ذخیره شد' });
+                  } catch (err) {
+                    setMessage({ kind: 'error', text: errorText(err) });
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              />
+              {profile.avatarUrl && (
+                <Button
+                  small
+                  variant="danger"
+                  disabled={busy}
+                  onClick={async () => {
+                    setBusy(true);
+                    try {
+                      setProfile(await specialistsApi.removeAvatar());
+                    } catch (err) {
+                      setMessage({ kind: 'error', text: errorText(err) });
+                    } finally {
+                      setBusy(false);
+                    }
+                  }}
+                >
+                  حذف عکس
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
 
         {profile && (
           <div className="card" style={{ maxWidth: 640 }}>

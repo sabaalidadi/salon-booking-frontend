@@ -13,6 +13,7 @@ export default defineConfig(({ mode }) => {
       // refreshToken on "/api/auth") work without any CORS setup.
       proxy: {
         '/api': { target, changeOrigin: true },
+        '/uploads': { target, changeOrigin: true },
       },
     },
   };

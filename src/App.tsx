@@ -3,6 +3,8 @@ import { RequireRole } from './auth/RequireRole';
 import { Layout } from './components/Layout';
 import { Empty } from './components/ui';
 import { Home } from './pages/Home';
+import { SpecialistDetail } from './pages/SpecialistDetail';
+import { Reviews } from './pages/Reviews';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Book } from './pages/Book';
@@ -12,6 +14,7 @@ import { SpecialistAppointments } from './pages/specialist/SpecialistAppointment
 import { WorkingHours } from './pages/specialist/WorkingHours';
 import { SpecialistProfilePage } from './pages/specialist/SpecialistProfile';
 import { AdminServices } from './pages/admin/AdminServices';
+import { AdminCategories } from './pages/admin/AdminCategories';
 import { AdminSpecialists } from './pages/admin/AdminSpecialists';
 import { AdminUsers } from './pages/admin/AdminUsers';
 
@@ -23,6 +26,8 @@ export function App() {
         <Route path="login" element={<Login />} />
         <Route path="register" element={<Register />} />
         <Route path="book" element={<Book />} />
+        <Route path="specialists/:id" element={<SpecialistDetail />} />
+        <Route path="reviews" element={<Reviews />} />
 
         <Route element={<RequireRole />}>
           <Route path="profile" element={<Profile />} />
@@ -40,6 +45,7 @@ export function App() {
 
         <Route element={<RequireRole roles={['ADMIN']} />}>
           <Route path="admin/services" element={<AdminServices />} />
+          <Route path="admin/categories" element={<AdminCategories />} />
           <Route path="admin/specialists" element={<AdminSpecialists />} />
           <Route path="admin/users" element={<AdminUsers />} />
         </Route>

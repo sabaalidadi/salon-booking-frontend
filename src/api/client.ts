@@ -57,7 +57,9 @@ async function send(path: string, init: RequestInit): Promise<Response> {
       ...init,
       credentials: 'include',
       headers: {
-        ...(init.body ? { 'Content-Type': 'application/json' } : {}),
+        ...(init.body && !(init.body instanceof FormData)
+          ? { 'Content-Type': 'application/json' }
+          : {}),
         ...init.headers,
       },
     });
@@ -73,7 +75,12 @@ export async function request<T>(
   const { method = 'GET', body, retry = true } = options;
   const init: RequestInit = {
     method,
-    body: body === undefined ? undefined : JSON.stringify(body),
+    body:
+      body === undefined
+        ? undefined
+        : body instanceof FormData
+          ? body
+          : JSON.stringify(body),
   };
 
   let res = await send(path, init);

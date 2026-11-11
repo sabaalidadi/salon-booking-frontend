@@ -1,5 +1,5 @@
-import { useState, type FormEvent } from 'react';
-import { servicesApi } from '../../api/endpoints';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { categoriesApi, servicesApi } from '../../api/endpoints';
 import type { SalonService } from '../../api/types';
 import { Dialog } from '../../components/Dialog';
 import {
@@ -10,6 +10,7 @@ import {
   Field,
   Input,
   PageHeader,
+  Select,
   Textarea,
 } from '../../components/ui';
 import { formatDuration, formatPrice } from '../../lib/format';
@@ -19,6 +20,8 @@ type Editing = SalonService | 'new' | null;
 
 export function AdminServices() {
   const { data, loading, error, reload } = useAsync(() => servicesApi.list());
+  const cats = useAsync(() => categoriesApi.list());
+  const catLabel = (id: string | null) => cats.data?.find((c) => c.id === id)?.label ?? '—';
   const [editing, setEditing] = useState<Editing>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -49,6 +52,7 @@ export function AdminServices() {
               <thead>
                 <tr>
                   <th>عنوان</th>
+                  <th>دسته‌بندی</th>
                   <th>مدت</th>
                   <th>قیمت</th>
                   <th />
@@ -58,9 +62,21 @@ export function AdminServices() {
                 {data.map((s) => (
                   <tr key={s.id}>
                     <td>
-                      <strong>{s.title}</strong>
-                      {s.description && <div className="muted small">{s.description}</div>}
+                      <div className="row">
+                        {s.imageUrl && (
+                          <img
+                            src={s.imageUrl}
+                            alt=""
+                            style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 8 }}
+                          />
+                        )}
+                        <div>
+                          <strong>{s.title}</strong>
+                          {s.description && <div className="muted small">{s.description}</div>}
+                        </div>
+                      </div>
                     </td>
+                    <td>{catLabel(s.categoryId)}</td>
                     <td>{formatDuration(s.durationMinutes)}</td>
                     <td className="price">{formatPrice(s.priceAmount)}</td>
                     <td>
@@ -110,8 +126,15 @@ function ServiceForm({
   const [description, setDescription] = useState(service?.description ?? '');
   const [duration, setDuration] = useState(String(service?.durationMinutes ?? 60));
   const [price, setPrice] = useState(String(service?.priceAmount ?? ''));
+  const [categoryId, setCategoryId] = useState(service?.categoryId ?? '');
+  const categories = useAsync(() => categoriesApi.list());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [removeImage, setRemoveImage] = useState(false);
+  const preview = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
+  useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
+  const shownImage = preview ?? (removeImage ? null : service?.imageUrl ?? null);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -127,13 +150,17 @@ function ServiceForm({
       description: description.trim() || null,
       durationMinutes,
       priceAmount,
+      categoryId: categoryId || null,
     };
 
     setBusy(true);
     setError(null);
     try {
-      if (service) await servicesApi.update(service.id, dto);
-      else await servicesApi.create(dto);
+      const saved = service
+        ? await servicesApi.update(service.id, dto)
+        : await servicesApi.create(dto);
+      if (removeImage && service?.imageUrl && !file) await servicesApi.removeImage(saved.id);
+      if (file) await servicesApi.uploadImage(saved.id, file);
       onSaved();
     } catch (err) {
       setError(errorText(err));
@@ -149,12 +176,59 @@ function ServiceForm({
         <Field label="عنوان">
           <Input required maxLength={120} value={title} onChange={(e) => setTitle(e.target.value)} />
         </Field>
+        <Field label="دسته‌بندی">
+          <Select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+            <option value="">بدون دسته‌بندی</option>
+            {(categories.data ?? []).map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.icon} {c.label}
+              </option>
+            ))}
+          </Select>
+        </Field>
         <Field label="توضیحات (اختیاری)">
           <Textarea
             maxLength={1000}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
+        </Field>
+        <Field label="عکس (اختیاری، حداکثر ۲ مگابایت)">
+          <div className="row">
+            {shownImage && (
+              <img
+                src={shownImage}
+                alt=""
+                style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 8 }}
+              />
+            )}
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={(e) => {
+                const f = e.target.files?.[0] ?? null;
+                if (f && f.size > 2 * 1024 * 1024) {
+                  e.target.value = '';
+                  return setError('حجم عکس باید کمتر از ۲ مگابایت باشد');
+                }
+                setError(null);
+                setFile(f);
+              }}
+            />
+            {shownImage && (
+              <Button
+                type="button"
+                small
+                variant="danger"
+                onClick={() => {
+                  setFile(null);
+                  setRemoveImage(true);
+                }}
+              >
+                حذف عکس
+              </Button>
+            )}
+          </div>
         </Field>
         <div className="form-grid">
           <Field label="مدت (دقیقه)">
